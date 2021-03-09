@@ -35,6 +35,8 @@ kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${N
 kubectl rollout status deployment/$DEPLOYMENT_NAME-$VERSION --namespace=${NAMESPACE}
 
 # Wait for restarts
+echo "[DEPLOY] Rollout done. Waiting $RESTART_WAIT seconds for restarts..."
+
 sleep $RESTART_WAIT
 
 # Check restarts
