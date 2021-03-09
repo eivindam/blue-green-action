@@ -45,6 +45,8 @@ if [ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]; then
    echo "[DEPLOY] $(kubectl describe pods -l version="$VERSION" -n $NAMESPACE)"
 
    kubectl delete deployment $DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
+
+   exit 1
 else
    echo "[DEPLOY] Activating version $VERSION in service"
    kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
@@ -53,6 +55,8 @@ else
    kubectl delete deployment $DEPLOY_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
 
    echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
+
+   exit 0
 fi
 
 
