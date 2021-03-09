@@ -30,8 +30,8 @@ if [ "$CURRENT_VERSION" == "$VERSION" ]; then
    exit 0
 fi
 
-kubectl get deployment $DEPLOY_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
-kubectl rollout status deployment/$DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
+kubectl get deployment $DEPLOY_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+kubectl rollout status deployment/$DEPLOY_NAME --namespace=${NAMESPACE}
 
 sleep 10
 
