@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 KUBE_CONFIG=$1
 DEPLOY_PATH=$2
 
