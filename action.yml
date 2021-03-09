@@ -16,5 +16,5 @@ runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
-    - ${{ inputs.kubeconfig }}
-    - ${{ inputs.deploypath }}
+    - ${{ inputs.kube-config }}
+    - ${{ inputs.deploy-path }}
