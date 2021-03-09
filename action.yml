@@ -41,5 +41,5 @@ runs:
     - ${{ inputs.service-name }}
     - ${{ inputs.namespace }}
     - ${{ inputs.accepted-restarts }}
-    - ${{ inputs.restarts-wait }}
+    - ${{ inputs.restart-wait }}
     - ${{ inputs.version }}
