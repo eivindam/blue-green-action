@@ -6,6 +6,7 @@ KUBE_CONFIG=$1
 DEPLOY_PATH=$2
 BRANCH_NAME=$(echo $GITHUB_REF | cut -d'/' -f 3)
 GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c1-7)
+DEPLOY_VERSION = ${GITHUB_SHA_SHORT}
 NAMESPACE=default
 DEPLOY_NAME=websocket
 
@@ -22,7 +23,6 @@ mkdir ~/.kube/
 echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
 # Deploy
-DEPLOY_VERSION = $GITHUB_SHA_SHORT
 CURRENT_VERSION = $(kubectl get service $DEPLOY_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
 if [ "$CURRENT_VERSION" == "$DEPLOY_VERSION" ]; then
