@@ -8,6 +8,7 @@ SERVICE_NAME=$3
 NAMESPACE=$4
 ROLLOUT_ACCEPTED_RESTARTS=$5
 RESTART_WAIT=$6
+VERSION=$7
 
 # Setup AWS Config
 aws configure --profile test_deploy <<-EOF > /dev/null 2>&1

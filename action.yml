@@ -13,6 +13,10 @@ inputs:
     description: 'Service name'
     required: true
     default: ''
+  version:
+    description: 'Deployment version'
+    required: true
+    default: 'latest'
   namespace:
     description: 'Namespace'
     required: true
@@ -38,3 +42,4 @@ runs:
     - ${{ inputs.namespace }}
     - ${{ inputs.accepted-restarts }}
     - ${{ inputs.restarts-wait }}
+    - ${{ inputs.version }}
