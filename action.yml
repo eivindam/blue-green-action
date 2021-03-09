@@ -1,0 +1,20 @@
+name: 'Green blue deploy'
+description: 'Green blue kubernetes deploy'
+inputs:
+  kube-config:
+    description: 'Kubernetes config'
+    required: true
+    default: ''
+  deploy-path:
+    description: 'Deploy path'
+    required: true
+    default: ''
+outputs:
+  test:
+    description: 'Test'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.kubeconfig }}
+    - ${{ inputs.deploypath }}
