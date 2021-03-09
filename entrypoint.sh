@@ -23,7 +23,7 @@ echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
 # Deploy
 DEPLOY_VERSION = $GITHUB_SHA_SHORT
-CURRENT_VERSION = $(kubectl get service $SERVICE_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
+CURRENT_VERSION = $(kubectl get service $DEPLOY_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
 if [ "$CURRENT_VERSION" == "$DEPLOY_VERSION" ]; then
    echo "[DEPLOY] Both versions are the same: $DEPLOY_VERSION"
