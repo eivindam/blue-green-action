@@ -9,7 +9,8 @@ GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c1-7)
 VERSION=${GITHUB_SHA_SHORT}
 NAMESPACE=default
 DEPLOY_NAME=websocket
-
+SERVICE_NAME=websocket
+ACCEPTED_RESTARTS=1
 # Setup AWS Config
 aws configure --profile test_deploy <<-EOF > /dev/null 2>&1
 ${AWS_ACCESS_KEY_ID}
@@ -35,6 +36,22 @@ kubectl rollout status deployment/$DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
 
 sleep 10
 
-echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE --no-headers)"
+RESTARTS=$(kubectl get pods -l version="$VERSION" -n default --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
 
-#activate kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$DEPLOY_VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
+if [ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]; then
+   echo "[DEPLOY] is unhealthy"
+
+   kubectl describe pods -l version="$VERSION"
+
+   echo "[DEPLOY] Removing old version $CURRENT_VERSION"
+   kubectl delete deployment $DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
+else
+   echo "[DEPLOY] Activating version $VERSION in service"
+   kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
+     
+   echo "[DEPLOY] Removing old version $CURRENT_VERSION"
+   kubectl delete deployment $DEPLOY_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
+fi
+
+
+echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE --no-headers)"
