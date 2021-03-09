@@ -1,17 +1,13 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 KUBE_CONFIG=$1
-DEPLOY_PATH=$2
-BRANCH_NAME=$(echo $GITHUB_REF | cut -d'/' -f 3)
-GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c1-7)
-VERSION=${GITHUB_SHA_SHORT}
-NAMESPACE=default
-DEPLOY_NAME=websocket
-SERVICE_NAME=websocket
-ACCEPTED_RESTARTS=1
-ROLLOUT_SLEEP=10
+DEPLOYMENT_NAME=$2
+SERVICE_NAME=$3
+NAMESPACE=$4
+ROLLOUT_ACCEPTED_RESTARTS=$5
+RESTART_WAIT=$6
 
 # Setup AWS Config
 aws configure --profile test_deploy <<-EOF > /dev/null 2>&1
@@ -25,38 +21,43 @@ EOF
 mkdir ~/.kube/
 echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
-# Deploy
-CURRENT_VERSION=$(kubectl get service $DEPLOY_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
+# Check current version
+CURRENT_VERSION=$(kubectl get service $DEPLOYMENT_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
 if [ "$CURRENT_VERSION" == "$VERSION" ]; then
    echo "[DEPLOY] Both versions are the same: $VERSION"
    exit 0
 fi
 
-kubectl get deployment $DEPLOY_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
-kubectl rollout status deployment/$DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
+# Rollout new version
+kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+kubectl rollout status deployment/$DEPLOYMENT_NAME-$VERSION --namespace=${NAMESPACE}
 
-sleep $ROLLOUT_SLEEP
+# Wait for restarts
+sleep $RESTART_WAIT
 
+# Check restarts
 RESTARTS=$(kubectl get pods -l version="$VERSION" -n default --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
 
 if [ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]; then
-   echo "[DEPLOY] $VERSION is unhealthy, removing version"
-   echo "[DEPLOY] $(kubectl describe pods -l version="$VERSION" -n $NAMESPACE)"
+    # Unhealty, give some debug output and delete deployment    
+    echo "[DEPLOY] $VERSION is unhealthy, removing version"
+    echo "[DEPLOY] $(kubectl describe pods -l version="$VERSION" -n $NAMESPACE)"
 
-   kubectl delete deployment $DEPLOY_NAME-$VERSION --namespace=${NAMESPACE}
+    kubectl delete deployment $DEPLOYMENT_NAME-$VERSION --namespace=${NAMESPACE}
 
-   exit 1
+    exit 1
 else
-   echo "[DEPLOY] Activating version $VERSION in service"
-   kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
+    # Healty, activate version in service
+    echo "[DEPLOY] Activating version $VERSION in service"
+    kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
      
-   echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-   kubectl delete deployment $DEPLOY_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
+    echo "[DEPLOY] Removing old version $CURRENT_VERSION"
+    kubectl delete deployment $DEPLOYMENT_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
 
-   echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
+    echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
 
-   exit 0
+    exit 0
 fi
 
 

@@ -5,16 +5,36 @@ inputs:
     description: 'Kubernetes config'
     required: true
     default: ''
-  deploy-path:
-    description: 'Deploy path'
+  deployment-name:
+    description: 'Deployment name'
     required: true
     default: ''
+  service-name:
+    description: 'Service name'
+    required: true
+    default: ''
+  namespace:
+    description: 'Namespace'
+    required: true
+    default: ''
+  accepted-restarts:
+    description: 'Accepted restarts'
+    required: true
+    default: '1'
+  restarts-wait:
+    description: 'Wait after rollout for restarts'
+    required: true
+    default: '10'
 outputs:
   test:
-    description: 'Test'
+    description: 'test'
 runs:
   using: 'docker'
   image: 'Dockerfile'
   args:
     - ${{ inputs.kube-config }}
-    - ${{ inputs.deploy-path }}
+    - ${{ inputs.deployment-name }}
+    - ${{ inputs.service-name }}
+    - ${{ inputs.namespace }}
+    - ${{ inputs.accepted-restarts }}
+    - ${{ inputs.restarts-wait }}
