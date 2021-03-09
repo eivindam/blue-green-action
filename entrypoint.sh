@@ -9,7 +9,7 @@ mkdir ~/.kube/
 mkdir ~/.aws/
 
 printf "[profile test_deploy]\nregion=%s\n" > ~/.aws/config
-printf "[profile test_deploy]\naws_access_key_id=%s\naws_secret_access_key=%s\n" $AWS_REGION $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY > ~/.aws/credentials
+printf "[test_deploy]\naws_access_key_id=%s\naws_secret_access_key=%s\n" $AWS_REGION $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY > ~/.aws/credentials
 
 echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
