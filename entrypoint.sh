@@ -38,7 +38,7 @@ kubectl rollout status deployment/$DEPLOYMENT_NAME-$VERSION --namespace=${NAMESP
 sleep $RESTART_WAIT
 
 # Check restarts
-RESTARTS=$(kubectl get pods -l version="$VERSION" -n default --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
+RESTARTS=$(kubectl get pods -l version="$VERSION" -n ${NAMESPACE} --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
 
 if [ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]; then
     # Unhealty, give some debug output and delete deployment    
