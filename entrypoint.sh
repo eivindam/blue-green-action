@@ -48,12 +48,14 @@ if [[ $MODE == "color" ]]; then
     POD_NAME=$(kubectl get pods --selector=version=$CURRENT_VERSION -o jsonpath='{.items[*].metadata.generateName}' | head -1)
 
     if [[ "$POD_NAME" == *"$COLOR_EVEN"* ]]; then
-        COLOR="$COLOR_ODD"
+        NEW_COLOR="$COLOR_ODD"
+        OLD_COLOR="$COLOR_EVEN"
     else
-        COLOR="$COLOR_EVEN"
+        NEW_COLOR="$COLOR_EVEN"
+        OLD_COLOR="$COLOR_ODD"
     fi
 
-    DEPLOY_NAME="$DEPLOYMENT_NAME-$COLOR"
+    DEPLOY_NAME="$DEPLOYMENT_NAME-$OLD_COLOR"
 else
     DEPLOY_NAME="$DEPLOYMENT_NAME-$CURRENT_VERSION"
 fi
@@ -67,7 +69,12 @@ if [[ "$DEPLOY_YAML" == "" ]]; then
     exit 1
 fi
 # Rollout new version
-echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+if [[ $MODE == "color" ]]; then
+    echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
+else
+    echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+fi
+
 kubectl rollout status deployment/$DEPLOY_NAME --namespace=${NAMESPACE}
 
 # Wait for restarts
