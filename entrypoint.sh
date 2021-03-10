@@ -30,18 +30,18 @@ echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 # Check current version
 CURRENT_VERSION=$(kubectl get service $SERVICE_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
-if [ "$CURRENT_VERSION" == "" ]; then
+if [[ "$CURRENT_VERSION" == "" ]]; then
     echo "[DEPLOY] The service $DEPLOYMENT_NAME is missing, or another error occurred"
 
     exit 1
 fi
 
-if [ "$CURRENT_VERSION" == "$VERSION" ]; then
+if [[ "$CURRENT_VERSION" == "$VERSION" ]; then
    echo "[DEPLOY] Both versions are the same: $VERSION"
    exit 0
 fi
 
-if [ $MODE == "color" ]; then    
+if [[ $MODE == "color" ]]; then    
     DESTROY_OLD=0
     DESTROY_FAILED=0
     
@@ -61,7 +61,7 @@ fi
 # Verify that deployment exists and get YAML definition
 DEPLOY_YAML=$(kubectl get deployment $DEPLOY_NAME -o=yaml --namespace=${NAMESPACE})
 
-if [ "$DEPLOY_YAML" == "" ]; then
+if [[ "$DEPLOY_YAML" == "" ]]; then
     echo "[DEPLOY] The deployment $DEPLOY_NAME is missing, or another error occurred"
 
     exit 1
@@ -78,12 +78,12 @@ sleep $RESTART_WAIT
 # Check restarts
 RESTARTS=$(kubectl get pods -l version="$VERSION" -n ${NAMESPACE} --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
 
-if [ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]; then
+if [[ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]]; then
     # Unhealty, give some debug output and delete deployment    
     echo "[DEPLOY] $VERSION is unhealthy, removing version"
     echo "[DEPLOY] $(kubectl describe pods -l version="$VERSION" -n $NAMESPACE)"
 
-    if [ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0"]; then
+    if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
         echo "[DEPLOY] Removing old version $CURRENT_VERSION"
         kubectl delete deployment $DEPLOY_NAME --namespace=${NAMESPACE}
     fi
@@ -94,7 +94,7 @@ else
     echo "[DEPLOY] Activating version $VERSION in service"
     kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
 
-    if []"$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0"]; then
+    if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
         echo "[DEPLOY] Removing old version $CURRENT_VERSION"
         kubectl delete deployment $DEPLOY_NAME --namespace=${NAMESPACE} 
     fi
