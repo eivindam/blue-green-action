@@ -30,8 +30,17 @@ if [ "$CURRENT_VERSION" == "$VERSION" ]; then
    exit 0
 fi
 
+# Verify that deployment exists and get YAML definition
+DEPLOY_YAML=$(kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE})
+
+if [[ $DEPLOY_YAML == *"Error from server"* ]]; then
+    echo "[DEPLOY] The deployment $DEPLOYMENT_NAME-$CURRENT_VERSION is missing, or another error occurred"
+
+    exit 1
+fi
+
 # Rollout new version
-kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 kubectl rollout status deployment/$DEPLOYMENT_NAME-$VERSION --namespace=${NAMESPACE}
 
 # Wait for restarts
