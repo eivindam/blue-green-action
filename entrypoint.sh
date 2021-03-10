@@ -34,7 +34,7 @@ if [[ "${CURRENT_VERSION}" == "" ]]; then
 
     exit 1
 else
-    echo "[DEPLOY] The current version for ${SERVICE_NAME} is ${CURRENT_VERSION}"
+    echo "[DEPLOY] The active version for ${SERVICE_NAME} is ${CURRENT_VERSION}"
 fi
 
 if [[ "${CURRENT_VERSION}" == "${VERSION}" ]]; then
