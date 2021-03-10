@@ -56,7 +56,7 @@ fi
 OLD_NAME="${DEPLOYMENT_NAME}-${OLD_COLOR}"
 NEW_NAME="${DEPLOYMENT_NAME}-${NEW_COLOR}"
 
-# Verify that deployment exists and get YAML definition
+# Verify that current deployment exists and get YAML definition
 OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml --namespace=${NAMESPACE})
 
 if [[ "${OLD_YAML}" == "" ]]; then
@@ -65,6 +65,7 @@ if [[ "${OLD_YAML}" == "" ]]; then
     exit 1
 fi
 
+# Check for the new deployment. Create it if it doesn't exist, or patch it with version to redeploy.
 NEW_YAML=$(kubectl get deployment ${NEW_NAME} -o=yaml -n ${NAMESPACE})
 
 if [[ "$NEW_YAML" == "" ]]; then
