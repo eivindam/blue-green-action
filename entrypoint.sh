@@ -70,9 +70,9 @@ if [[ "$DEPLOY_YAML" == "" ]]; then
 fi
 # Rollout new version
 if [[ $MODE == "color" ]]; then
-    echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
+    echo "${DEPLOY_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
 else
-    echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+    echo "${DEPLOY_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 fi
 
 kubectl rollout status deployment/$DEPLOY_NAME --namespace=${NAMESPACE}
