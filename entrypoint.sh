@@ -9,6 +9,7 @@ NAMESPACE=$4
 ACCEPTED_RESTARTS=$5
 RESTART_WAIT=$6
 VERSION=$7
+DESTROY_OLD=1
 
 # Setup AWS Config
 aws configure --profile test_deploy <<-EOF > /dev/null 2>&1
@@ -68,13 +69,13 @@ else
     # Healty, activate version in service
     echo "[DEPLOY] Activating version $VERSION in service"
     kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
-     
-    echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-    kubectl delete deployment $DEPLOYMENT_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
+
+    if ($DESTROY_OLD != "") {
+      echo "[DEPLOY] Removing old version $CURRENT_VERSION"
+      kubectl delete deployment $DEPLOYMENT_NAME-$CURRENT_VERSION --namespace=${NAMESPACE} 
+    }
 
     echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
 
     exit 0
 fi
-
-
