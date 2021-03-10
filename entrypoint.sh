@@ -92,6 +92,7 @@ RESTARTS=$(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE} --no-headers
 if [[ "${RESTARTS}" -gt "${ACCEPTED_RESTARTS}" ]]; then
     # Unhealty, give some debug output and delete deployment    
     echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is unhealthy. The service will not be changed."
+    echo "[DEPLOY] Pods:"
 
     echo "$(kubectl describe pods -l version="${VERSION}" -n ${NAMESPACE})"
 
@@ -102,6 +103,8 @@ else
     #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
     kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
 
+    echo "[DEPLOY] Pods:"
+    
     echo "$(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE})"
 
     exit 0
