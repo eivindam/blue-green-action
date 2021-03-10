@@ -26,7 +26,7 @@ echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 CURRENT_VERSION=$(kubectl get service $DEPLOYMENT_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
 if [[ $CURRENT_VERSION == "" ]]; then
-    echo "[DEPLOY] The deployment $DEPLOYMENT_NAME-<version> is missing, or another error occurred"
+    echo "[DEPLOY] The service $DEPLOYMENT_NAME is missing, or another error occurred"
 
     exit 1
 fi
@@ -39,6 +39,11 @@ fi
 # Verify that deployment exists and get YAML definition
 DEPLOY_YAML=$(kubectl get deployment $DEPLOYMENT_NAME-$CURRENT_VERSION -o=yaml --namespace=${NAMESPACE})
 
+if [[ $DEPLOY_YAML == "" ]]; then
+    echo "[DEPLOY] The deployment $DEPLOYMENT_NAME-$CURRENT_VERSION is missing, or another error occurred"
+
+    exit 1
+fi
 # Rollout new version
 echo $DEPLOY_YAML | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 kubectl rollout status deployment/$DEPLOYMENT_NAME-$VERSION --namespace=${NAMESPACE}
