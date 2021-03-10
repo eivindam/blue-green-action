@@ -9,9 +9,6 @@ NAMESPACE=$4
 ACCEPTED_RESTARTS=$5
 RESTART_WAIT=$6
 VERSION=$7
-DESTROY_OLD=1
-DESTROY_FAILED=1
-MODE=color
 COLOR_EVEN=blue
 COLOR_ODD=green
 
@@ -28,90 +25,73 @@ mkdir ~/.kube/
 echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
 # Check current version
-CURRENT_VERSION=$(kubectl get service $SERVICE_NAME -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
+CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
-if [[ "$CURRENT_VERSION" == "" ]]; then
-    echo "[DEPLOY] The service $DEPLOYMENT_NAME is missing, or another error occurred"
+if [[ "${CURRENT_VERSION}" == "" ]]; then
+    echo "[DEPLOY] The service ${DEPLOYMENT_NAME} is missing, or another error occurred"
 
     exit 1
 fi
 
-if [[ "$CURRENT_VERSION" == "$VERSION" ]]; then
-   echo "[DEPLOY] Both versions are the same: $VERSION"
+if [[ "${CURRENT_VERSION}" == "${VERSION}" ]]; then
+   echo "[DEPLOY] The version is already active inn the service: ${VERSION}"
+
    exit 0
 fi
 
-if [[ $MODE == "color" ]]; then    
-    DESTROY_OLD=0
-    DESTROY_FAILED=0
-    
-    POD_NAME=$(kubectl get pods --selector=version=$CURRENT_VERSION -o jsonpath='{.items[*].metadata.generateName}' | head -1)
+POD_NAME=$(kubectl get pods --selector=version=${CURRENT_VERSION} -o jsonpath='{.items[*].metadata.generateName}' | head -1)
 
-    if [[ "$POD_NAME" == *"$COLOR_EVEN"* ]]; then
-        NEW_COLOR="$COLOR_ODD"
-        OLD_COLOR="$COLOR_EVEN"
-    else
-        NEW_COLOR="$COLOR_EVEN"
-        OLD_COLOR="$COLOR_ODD"
-    fi
-
-    OLD_NAME="$DEPLOYMENT_NAME-$OLD_COLOR"
-    NEW_NAME="$DEPLOYMENT_NAME-$NEW_COLOR"
+if [[ "${POD_NAME}" == *"${COLOR_EVEN}"* ]]; then
+    NEW_COLOR="${COLOR_ODD}"
+    OLD_COLOR="${COLOR_EVEN}"
 else
-    OLD_NAME="$DEPLOYMENT_NAME-$CURRENT_VERSION"
-    NEW_NAME="$DEPLOYMENT_NAME-$VERSION"
+    NEW_COLOR="${COLOR_EVEN}"
+    OLD_COLOR="${COLOR_ODD}"
 fi
 
-# Verify that deployment exists and get YAML definition
-OLD_YAML=$(kubectl get deployment $OLD_NAME -o=yaml --namespace=${NAMESPACE})
+OLD_NAME="${DEPLOYMENT_NAME}-${OLD_COLOR}"
+NEW_NAME="${DEPLOYMENT_NAME}-${NEW_COLOR}"
 
-if [[ "$OLD_YAML" == "" ]]; then
-    echo "[DEPLOY] The deployment $OLD_NAME is missing, or another error occurred"
+# Verify that deployment exists and get YAML definition
+OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml --namespace=${NAMESPACE})
+
+if [[ "${OLD_YAML}" == "" ]]; then
+    echo "[DEPLOY] The deployment ${OLD_NAME} is missing, or another error occurred"
 
     exit 1
 fi
 
-NEW_YAML=$(kubectl get deployment $NEW_NAME -o=yaml --namespace=${NAMESPACE})
+NEW_YAML=$(kubectl get deployment ${NEW_NAME} -o=yaml -n ${NAMESPACE})
 
 if [[ "$NEW_YAML" == "" ]]; then
-   echo "${OLD_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
+   echo "${OLD_YAML}" | sed -e "s/${CURRENT_VERSION}/${VERSION}/g" | sed -e "s/${OLD_COLOR}/${NEW_COLOR}/g" | kubectl apply -n ${NAMESPACE} -f -
 else
-   kubectl patch deployment $NEW_NAME -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
+   kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
 fi
 
-kubectl rollout status deployment/$NEW_NAME --namespace=${NAMESPACE}
+kubectl rollout status deployment ${NEW_NAME} --namespace=${NAMESPACE}
 
 # Wait for restarts
-echo "[DEPLOY] Rollout done. Waiting $RESTART_WAIT seconds for restarts..."
+echo "[DEPLOY] Rollout done. Waiting ${RESTART_WAIT} seconds for restarts..."
 
 sleep $RESTART_WAIT
 
 # Check restarts
-RESTARTS=$(kubectl get pods -l version="$VERSION" -n ${NAMESPACE} --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
-#kubectl patch svc $SERVICE -p "{\"spec\":{\"selector\": {\"name\": \"${SERVICE}\", \"version\": \"${VERSION}\"}}}"
+RESTARTS=$(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE} --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
 
-if [[ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]]; then
+if [[ "${RESTARTS}" -gt "${ACCEPTED_RESTARTS}" ]]; then
     # Unhealty, give some debug output and delete deployment    
-    echo "[DEPLOY] $VERSION is unhealthy, removing version"
-    echo "[DEPLOY] $(kubectl describe pods -l version="$VERSION" -n $NAMESPACE)"
-
-    if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
-        echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-        kubectl delete deployment $OLD_NAME --namespace=${NAMESPACE}
-    fi
+    echo "[DEPLOY] version ${VERSION} is unhealthy"
+    echo "[DEPLOY] $(kubectl describe pods -l version="${VERSION}" -n ${NAMESPACE})"
 
     exit 1
 else
     # Healty, activate version in service
-    echo "[DEPLOY] Activating version $VERSION in service"
-    kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
+    echo "[DEPLOY] Activating version ${VERSION} in service"
+    #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
+    kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
 
-    if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
-        echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-        kubectl delete deployment $OLD_NAME --namespace=${NAMESPACE} 
-    fi
-
-    echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
+    echo "[DEPLOY] $(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE})"
 
     exit 0
 fi
