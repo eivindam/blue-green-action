@@ -48,9 +48,9 @@ if [ $MODE == "color" ]; then
     POD_NAME=$(kubectl get pods --selector=version=$CURRENT_VERSION -o jsonpath='{.items[0].metadata.generateName}')
 
     if [ "$POD_NAME" =~ "$COLOR_EVEN" ]; then
-        COLOR=$COLOR_ODD
+        COLOR="$COLOR_ODD"
     else
-        COLOR=$COLOR_EVEN
+        COLOR="$COLOR_EVEN"
     fi
 
     DEPLOY_NAME="$DEPLOYMENT_NAME-$COLOR"
