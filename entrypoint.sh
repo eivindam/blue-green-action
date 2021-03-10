@@ -55,27 +55,31 @@ if [[ $MODE == "color" ]]; then
         OLD_COLOR="$COLOR_ODD"
     fi
 
-    DEPLOY_NAME="$DEPLOYMENT_NAME-$OLD_COLOR"
+    OLD_NAME="$DEPLOYMENT_NAME-$OLD_COLOR"
+    NEW_NAME="$DEPLOYMENT_NAME-$NEW_COLOR"
 else
-    DEPLOY_NAME="$DEPLOYMENT_NAME-$CURRENT_VERSION"
+    OLD_NAME="$DEPLOYMENT_NAME-$CURRENT_VERSION"
+    NEW_NAME="$DEPLOYMENT_NAME-$VERSION"
 fi
 
 # Verify that deployment exists and get YAML definition
-DEPLOY_YAML=$(kubectl get deployment $DEPLOY_NAME -o=yaml --namespace=${NAMESPACE})
+OLD_YAML=$(kubectl get deployment $OLD_NAME -o=yaml --namespace=${NAMESPACE})
 
-if [[ "$DEPLOY_YAML" == "" ]]; then
-    echo "[DEPLOY] The deployment $DEPLOY_NAME is missing, or another error occurred"
+if [[ "$OLD_YAML" == "" ]]; then
+    echo "[DEPLOY] The deployment $OLD_NAME is missing, or another error occurred"
 
     exit 1
 fi
-# Rollout new version
-if [[ $MODE == "color" ]]; then
-    echo "${DEPLOY_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
+
+NEW_YAML=$(kubectl get deployment $NEW_NAME -o=yaml --namespace=${NAMESPACE})
+
+if [[ "NEW_YAML" == "" ]]; then
+    echo "${OLD_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
 else
-    echo "${DEPLOY_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+    echo "${NEW_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
 fi
 
-kubectl rollout status deployment/$DEPLOY_NAME --namespace=${NAMESPACE}
+kubectl rollout status deployment/$NEW_NAME --namespace=${NAMESPACE}
 
 # Wait for restarts
 echo "[DEPLOY] Rollout done. Waiting $RESTART_WAIT seconds for restarts..."
@@ -92,7 +96,7 @@ if [[ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]]; then
 
     if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
         echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-        kubectl delete deployment $DEPLOY_NAME --namespace=${NAMESPACE}
+        kubectl delete deployment $OLD_NAME --namespace=${NAMESPACE}
     fi
 
     exit 1
@@ -103,7 +107,7 @@ else
 
     if [[ "$DESTROY_OLD" != "" && "$DESTROY_OLD" != "0" ]]; then
         echo "[DEPLOY] Removing old version $CURRENT_VERSION"
-        kubectl delete deployment $DEPLOY_NAME --namespace=${NAMESPACE} 
+        kubectl delete deployment $OLD_NAME --namespace=${NAMESPACE} 
     fi
 
     echo "[DEPLOY] $(kubectl get pods -l version="$VERSION" -n $NAMESPACE)"
