@@ -24,13 +24,17 @@ EOF
 mkdir ~/.kube/
 echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 
+echo "[DEPLOY] Checking active version.."
+
 # Check current version
 CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
 
 if [[ "${CURRENT_VERSION}" == "" ]]; then
-    echo "[DEPLOY] The service ${DEPLOYMENT_NAME} is missing, or another error occurred"
+    echo "[DEPLOY] The service ${SERVICE_NAME} is missing, or another error occurred"
 
     exit 1
+else
+    echo "[DEPLOY] The current version for ${SERVICE_NAME} is ${CURRENT_VERSION}"
 fi
 
 if [[ "${CURRENT_VERSION}" == "${VERSION}" ]]; then
@@ -64,10 +68,16 @@ fi
 NEW_YAML=$(kubectl get deployment ${NEW_NAME} -o=yaml -n ${NAMESPACE})
 
 if [[ "$NEW_YAML" == "" ]]; then
-   echo "${OLD_YAML}" | sed -e "s/${CURRENT_VERSION}/${VERSION}/g" | sed -e "s/${OLD_COLOR}/${NEW_COLOR}/g" | kubectl apply -n ${NAMESPACE} -f -
+    echo "[DEPLOY] Creating new deployment for ${NEW_NAME} based on ${OLD_NAME}"
+   
+    echo "${OLD_YAML}" | sed -e "s/${CURRENT_VERSION}/${VERSION}/g" | sed -e "s/${OLD_COLOR}/${NEW_COLOR}/g" | kubectl apply -n ${NAMESPACE} -f -
 else
-   kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
+    echo "[DEPLOY] Patching deployment ${NEW_NAME} with version ${VERSION}. This triggers a redeploy."
+    
+    kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
 fi
+
+echo "[DEPLOY] Waiting for rollout..."
 
 kubectl rollout status deployment ${NEW_NAME} --namespace=${NAMESPACE}
 
@@ -81,17 +91,18 @@ RESTARTS=$(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE} --no-headers
 
 if [[ "${RESTARTS}" -gt "${ACCEPTED_RESTARTS}" ]]; then
     # Unhealty, give some debug output and delete deployment    
-    echo "[DEPLOY] version ${VERSION} is unhealthy"
-    echo "[DEPLOY] $(kubectl describe pods -l version="${VERSION}" -n ${NAMESPACE})"
+    echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is unhealthy. The service will not be changed."
+
+    echo "$(kubectl describe pods -l version="${VERSION}" -n ${NAMESPACE})"
 
     exit 1
 else
     # Healty, activate version in service
-    echo "[DEPLOY] Activating version ${VERSION} in service"
+    echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is healthy, activating in service"
     #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
     kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
 
-    echo "[DEPLOY] $(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE})"
+    echo "$(kubectl get pods -l version="${VERSION}" -n ${NAMESPACE})"
 
     exit 0
 fi
