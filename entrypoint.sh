@@ -36,7 +36,7 @@ if [[ "$CURRENT_VERSION" == "" ]]; then
     exit 1
 fi
 
-if [[ "$CURRENT_VERSION" == "$VERSION" ]; then
+if [[ "$CURRENT_VERSION" == "$VERSION" ]]; then
    echo "[DEPLOY] Both versions are the same: $VERSION"
    exit 0
 fi
