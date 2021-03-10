@@ -45,7 +45,7 @@ if [ $MODE == "color" ]; then
     DESTROY_OLD=0
     DESTROY_FAILED=0
     
-    POD_NAME=$(kubectl get pods --selector=version=$CURRENT_VERSION -o jsonpath='{.items[0].metadata.generateName}')
+    POD_NAME=$(kubectl get pods --selector=version=$CURRENT_VERSION -o jsonpath='{.items[*].metadata.generateName}' | head -1)
 
     if [ "$POD_NAME" =~ "$COLOR_EVEN" ]; then
         COLOR="$COLOR_ODD"
