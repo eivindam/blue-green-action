@@ -73,7 +73,7 @@ fi
 
 NEW_YAML=$(kubectl get deployment $NEW_NAME -o=yaml --namespace=${NAMESPACE})
 
-if [[ "NEW_YAML" == "" ]]; then
+if [[ "$NEW_YAML" == "" ]]; then
     echo "${OLD_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
 else
     echo "${NEW_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
@@ -88,6 +88,7 @@ sleep $RESTART_WAIT
 
 # Check restarts
 RESTARTS=$(kubectl get pods -l version="$VERSION" -n ${NAMESPACE} --no-headers -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1}END{print s}')
+#kubectl patch svc $SERVICE -p "{\"spec\":{\"selector\": {\"name\": \"${SERVICE}\", \"version\": \"${VERSION}\"}}}"
 
 if [[ "$RESTARTS" -gt "$ACCEPTED_RESTARTS" ]]; then
     # Unhealty, give some debug output and delete deployment    
