@@ -74,9 +74,9 @@ fi
 NEW_YAML=$(kubectl get deployment $NEW_NAME -o=yaml --namespace=${NAMESPACE})
 
 if [[ "$NEW_YAML" == "" ]]; then
-    echo "${OLD_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
+   echo "${OLD_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | sed -e "s/$OLD_COLOR/$NEW_COLOR/g" | kubectl apply --namespace=${NAMESPACE} -f -
 else
-    echo "${NEW_YAML}" | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f -
+   kubectl patch deployment $NEW_NAME -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
 fi
 
 kubectl rollout status deployment/$NEW_NAME --namespace=${NAMESPACE}
