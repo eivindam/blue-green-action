@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 KUBE_CONFIG=$1
 DEPLOYMENT_NAME=$2
