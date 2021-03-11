@@ -27,7 +27,7 @@ echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 echo "[DEPLOY] Checking active version.."
 
 # Check current version
-CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
+CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' -n ${NAMESPACE})
 
 if [[ "${CURRENT_VERSION}" == "" ]]; then
     echo "[DEPLOY] The service ${SERVICE_NAME} is missing, or another error occurred"
@@ -57,7 +57,7 @@ OLD_NAME="${DEPLOYMENT_NAME}-${OLD_COLOR}"
 NEW_NAME="${DEPLOYMENT_NAME}-${NEW_COLOR}"
 
 # Verify that current deployment exists and get YAML definition
-OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml --namespace=${NAMESPACE})
+OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml -n ${NAMESPACE})
 
 if [[ "${OLD_YAML}" == "" ]]; then
     echo "[DEPLOY] The deployment ${OLD_NAME} is missing, or another error occurred"
@@ -80,7 +80,7 @@ fi
 
 echo "[DEPLOY] Waiting for rollout..."
 
-kubectl rollout status deployment ${NEW_NAME} --namespace=${NAMESPACE}
+kubectl rollout status deployment ${NEW_NAME} -n ${NAMESPACE}
 
 # Wait for restarts
 echo "[DEPLOY] Rollout done. Waiting ${RESTART_WAIT} seconds for restarts..."
