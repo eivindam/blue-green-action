@@ -43,7 +43,7 @@ if [[ "${CURRENT_VERSION}" == "${VERSION}" ]]; then
    exit 0
 fi
 
-POD_NAME=$(kubectl get pods --selector=version=${CURRENT_VERSION} -o jsonpath='{.items[*].metadata.generateName} -n ${NAMESPACE}' | head -1)
+POD_NAME=$(kubectl get pods --selector=version=${CURRENT_VERSION} -o jsonpath='{.items[*].metadata.generateName}' -n ${NAMESPACE} | head -1)
 
 if [[ "${POD_NAME}" == *"${COLOR_EVEN}"* ]]; then
     NEW_COLOR="${COLOR_ODD}"
@@ -75,7 +75,7 @@ if [[ "$NEW_YAML" == "" ]]; then
 else
     echo "[DEPLOY] Patching deployment ${NEW_NAME} with version ${VERSION}. This triggers a redeploy."
     
-    kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}" -n ${NAMESPACE}
+    kubectl patch deployment ${NEW_NAME} -n ${NAMESPACE} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
 fi
 
 echo "[DEPLOY] Waiting for rollout..."
@@ -102,7 +102,7 @@ else
     # Healty, activate version in service
     echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is healthy, activating in service"
     #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
-    kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}" -n ${NAMESPACE}
+    kubectl patch svc ${SERVICE_NAME} -n ${NAMESPACE} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
 
     echo "[DEPLOY] Pods:"
     
