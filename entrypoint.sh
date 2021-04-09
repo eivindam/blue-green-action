@@ -27,7 +27,7 @@ echo $KUBE_CONFIG | base64 -d > ~/.kube/config
 echo "[DEPLOY] Checking active version.."
 
 # Check current version
-CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' --namespace=${NAMESPACE})
+CURRENT_VERSION=$(kubectl get service ${SERVICE_NAME} -o=jsonpath='{.spec.selector.version}' -n ${NAMESPACE})
 
 if [[ "${CURRENT_VERSION}" == "" ]]; then
     echo "[DEPLOY] The service ${SERVICE_NAME} is missing, or another error occurred"
@@ -43,7 +43,7 @@ if [[ "${CURRENT_VERSION}" == "${VERSION}" ]]; then
    exit 0
 fi
 
-POD_NAME=$(kubectl get pods --selector=version=${CURRENT_VERSION} -o jsonpath='{.items[*].metadata.generateName}' | head -1)
+POD_NAME=$(kubectl get pods --selector=version=${CURRENT_VERSION} -o jsonpath='{.items[*].metadata.generateName} -n ${NAMESPACE}' | head -1)
 
 if [[ "${POD_NAME}" == *"${COLOR_EVEN}"* ]]; then
     NEW_COLOR="${COLOR_ODD}"
@@ -57,7 +57,7 @@ OLD_NAME="${DEPLOYMENT_NAME}-${OLD_COLOR}"
 NEW_NAME="${DEPLOYMENT_NAME}-${NEW_COLOR}"
 
 # Verify that current deployment exists and get YAML definition
-OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml --namespace=${NAMESPACE})
+OLD_YAML=$(kubectl get deployment ${OLD_NAME} -o=yaml -n ${NAMESPACE})
 
 if [[ "${OLD_YAML}" == "" ]]; then
     echo "[DEPLOY] The deployment ${OLD_NAME} is missing, or another error occurred"
@@ -75,12 +75,12 @@ if [[ "$NEW_YAML" == "" ]]; then
 else
     echo "[DEPLOY] Patching deployment ${NEW_NAME} with version ${VERSION}. This triggers a redeploy."
     
-    kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}"
+    kubectl patch deployment ${NEW_NAME} -p "{\"spec\": {\"template\": {\"metadata\": { \"labels\": {  \"version\": \"${VERSION}\"}}}}}" -n ${NAMESPACE}
 fi
 
 echo "[DEPLOY] Waiting for rollout..."
 
-kubectl rollout status deployment ${NEW_NAME} --namespace=${NAMESPACE}
+kubectl rollout status deployment ${NEW_NAME} -n ${NAMESPACE}
 
 # Wait for restarts
 echo "[DEPLOY] Rollout done. Waiting ${RESTART_WAIT} seconds for restarts..."
@@ -102,7 +102,7 @@ else
     # Healty, activate version in service
     echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is healthy, activating in service"
     #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
-    kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
+    kubectl patch svc ${SERVICE_NAME} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}" -n ${NAMESPACE}
 
     echo "[DEPLOY] Pods:"
     
