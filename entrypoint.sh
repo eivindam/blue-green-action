@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -e
+#set -x
 
 KUBE_CONFIG=$1
 DEPLOYMENT_NAME=$2
@@ -68,7 +69,7 @@ fi
 # Check for the new deployment. Create it if it doesn't exist, or patch it with version to redeploy.
 NEW_YAML=$(kubectl get deployment ${NEW_NAME} -o=yaml -n ${NAMESPACE})
 
-if [[ "$NEW_YAML" == "" ]]; then
+if [[ "${NEW_YAML}" == "" ]]; then
     echo "[DEPLOY] Creating new deployment for ${NEW_NAME} based on ${OLD_NAME}"
    
     echo "${OLD_YAML}" | sed -e "s/${CURRENT_VERSION}/${VERSION}/g" | sed -e "s/${OLD_COLOR}/${NEW_COLOR}/g" | kubectl apply -n ${NAMESPACE} -f -
@@ -101,6 +102,7 @@ if [[ "${RESTARTS}" -gt "${ACCEPTED_RESTARTS}" ]]; then
 else
     # Healty, activate version in service
     echo "[DEPLOY] ${NEW_NAME} with version ${VERSION} is healthy, activating in service"
+    
     #kubectl get service $SERVICE_NAME -o=yaml --namespace=${NAMESPACE} | sed -e "s/$CURRENT_VERSION/$VERSION/g" | kubectl apply --namespace=${NAMESPACE} -f - 
     kubectl patch svc ${SERVICE_NAME} -n ${NAMESPACE} -p "{\"spec\":{\"selector\": {\"version\": \"${VERSION}\"}}}"
 
